@@ -8,7 +8,8 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-.zip
+WritezBackend.zip
+test.py
 build/
 develop-eggs/
 dist/

@@ -1,1 +1,1 @@
-python flask backend for our project
+Python Flask Backend used for querying the MySQL DB of the smart contract data
