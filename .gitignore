@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+ipfsPin.py
 # Distribution / packaging
 .Python
 WritezBackend.zip
