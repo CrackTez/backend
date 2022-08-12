@@ -108,9 +108,9 @@ def get_feed():
     table = 'mainnet' if net == 'mainnet' else 'jakartanet'
     mySqlQuery = f''''''
     if lastID == "":
-        mySqlQuery = f'''SELECT * FROM jakartanet ORDER BY (idKey + 1)-1 LIMIT {numToFetch}'''
+        mySqlQuery = f'''SELECT * FROM {table} ORDER BY (idKey + 1)-1 LIMIT {numToFetch}'''
     else:
-        mySqlQuery = f'''SELECT * FROM jakartanet WHERE (idKey +1 )-1 > {lastID} ORDER BY (idKey + 1)-1 LIMIT {numToFetch}'''
+        mySqlQuery = f'''SELECT * FROM {table} WHERE (idKey +1 )-1 > {lastID} ORDER BY (idKey + 1)-1 LIMIT {numToFetch}'''
     cur = mysql.connection.cursor()
     cur.execute(mySqlQuery)
     dbValues = cur.fetchall()
