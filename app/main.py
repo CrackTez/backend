@@ -5,6 +5,7 @@ from flask_mysqldb import MySQL
 from flask_cors import CORS
 import requests
 import time
+from app.function import getInsertQuery
 application = Flask(__name__)
 CORS(application)
 application.config['MYSQL_HOST'] = config('MYSQL_HOST')
@@ -12,6 +13,7 @@ application.config['MYSQL_USER'] = config('MYSQL_USER')
 application.config['MYSQL_PASSWORD'] = config('MYSQL_PASSWORD')
 application.config['MYSQL_DB'] = config('MYSQL_DB')
 mysql = MySQL(application)
+DISCORD_WEBHOOK = config('MAINNET_HOOK')
 
 IPFS_PROVIDERS = ["gateway.pinata.clout",  "gateway.ipfs.io", "cloudflare-ipfs.com", "cf-ipfs.com",
                   "ipfs.io"]
@@ -131,3 +133,109 @@ def get_feed():
         })
     return jsonify({"posts": finalJson})
 
+
+@application.route('/sync-testnet', methods=['GET'])
+def syncTestnet():
+    try:
+        selectQuery = f'''SELECT idKey, fundraised FROM jakartanet'''
+        cur = mysql.connection.cursor()
+        cur.execute(selectQuery)
+        dbIDs = cur.fetchall()
+        keyMap = {}
+        tableName = 'jakartanet'
+        contract_address = 'KT1FHtvk6RLLvcxEj94Dd45HGrTP21s6rf9Y'
+        for tuples in dbIDs:
+            keyMap[tuples[0]] = tuples[1]
+        print(keyMap)
+        insQuery = getInsertQuery(
+            keyMap, tableName, contract_address, 'jakartanet')
+        UPDATE_LIST = insQuery['UPDATE']
+        INSERT_QUERY = insQuery['INSERT']
+        responseJson = {}
+        if type(UPDATE_LIST) == list:
+            cur.executemany(
+                f"UPDATE {tableName} SET fundraised = %s WHERE idKey = %s ", UPDATE_LIST)
+            cur.connection.commit()
+            responseJson["UPDATE"] = True
+        else:
+            responseJson["UPDATE"] = False
+
+        if INSERT_QUERY is not None:
+            cur.execute(INSERT_QUERY)
+            cur.connection.commit()
+            responseJson["INSERT"] = True
+        else:
+            responseJson["INSERT"] = False
+        return jsonify(responseJson)
+    except Exception as e:
+        print(e)
+        return jsonify({
+            "UPDATE": None,
+            "INSERT": None
+        })
+
+
+@application.route('/sync-mainnet', methods=['GET'])
+def syncMainnet():
+    try:
+        selectQuery = f'''SELECT idKey, fundraised FROM mainnet'''
+        cur = mysql.connection.cursor()
+        cur.execute(selectQuery)
+        dbIDs = cur.fetchall()
+        keyMap = {}
+        tableName = 'mainnet'
+        contract_address = 'KT1Q1HQ95PgjSDy7Dk2eGvDfkHyNqGxoFWLi'
+        for tuples in dbIDs:
+            keyMap[tuples[0]] = tuples[1]
+        print(keyMap)
+        insQuery = getInsertQuery(
+            keyMap, tableName, contract_address, 'mainnet')
+        UPDATE_LIST = insQuery['UPDATE']
+        INSERT_QUERY = insQuery['INSERT']
+        responseJson = {}
+        if type(UPDATE_LIST) == list:
+            cur.executemany(
+                f"UPDATE {tableName} SET fundraised = %s WHERE idKey = %s ", UPDATE_LIST)
+            cur.connection.commit()
+            responseJson["UPDATE"] = True
+        else:
+            responseJson["UPDATE"] = False
+
+        if INSERT_QUERY is not None:
+            cur.execute(INSERT_QUERY)
+            cur.connection.commit()
+            responseJson["INSERT"] = True
+        else:
+            responseJson["INSERT"] = False
+
+        newPostList = insQuery["NEW_POST_LIST"]
+        print(newPostList)
+        for vals in newPostList:
+            idKey = vals['idKey']
+            title = vals['title']
+            author = vals['author']
+            thumbnailURL = vals['thumbnailURL']
+            fundraising_goal = vals['fundraising_goal']
+            print(thumbnailURL)
+            requests.post(
+                DISCORD_WEBHOOK,
+                json={
+                    "embeds": [
+                        {
+                            "title": title,
+                            "url": f'https://writez.xyz/post/{idKey}',
+                            "image": {
+                                "url": f'https://cloudflare-ipfs.com/ipfs/{thumbnailURL}',
+                            },
+                            "description": f":white_check_mark: New Post on Writez by `{author}` with a goal of {round(int(fundraising_goal)/1e6)} $XTZ",
+                        }
+                    ]
+                },
+            )
+        return jsonify(responseJson)
+    except Exception as e:
+        print(e)
+        return jsonify({
+            "UPDATE": None,
+            "INSERT": None
+        })
